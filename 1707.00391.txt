@@ -1,0 +1,592 @@
+Fair Pipelines∗
+Amanda Bower
+
+University of Michigan
+amandarg@umich.edu
+
+Martin J. Strauss
+
+University of Michigan
+martinjs@umich.edu
+
+Sarah N. Kitchen
+
+University of Michigan
+lniss@umich.edu
+
+Alexander Vargo
+
+Suresh Venkatasubramanian
+
+University of Michigan
+ahsvargo@umich.edu
+
+arXiv:1707.00391v1 [cs.CY] 3 Jul 2017
+
+ABSTRACT
+This work facilitates ensuring fairness of machine learning in the
+real world by decoupling fairness considerations in compound decisions. In particular, this work studies how fairness propagates
+through a compound decision-making processes, which we call a
+pipeline. Prior work in algorithmic fairness only focuses on fairness with respect to one decision. However, many decision-making
+processes require more than one decision. For instance, hiring is
+at least a two stage model: deciding who to interview from the
+applicant pool and then deciding who to hire from the interview
+pool. Perhaps surprisingly, we show that the composition of fair
+components may not guarantee a fair pipeline under a (1 + ε)-equal
+opportunity definition of fair. However, we identify circumstances
+that do provide that guarantee. We also propose numerous directions for future work on more general compound machine learning
+decisions.
+
+CCS CONCEPTS
+• Social and professional topics → Computing / technology
+policy; • Computing methodologies → Machine learning; •
+Applied computing → Computers in other domains;
+
+KEYWORDS
+Algorithmic fairness, equality of opportunity, compound decision
+making, machine learning
+ACM Reference format:
+Amanda Bower, Sarah N. Kitchen, Laura Niss, Martin J. Strauss, Alexander
+Vargo, and Suresh Venkatasubramanian. 2017. Fair Pipelines. In Proceedings
+of FAT/ML 2017, Halifax, Nova Scotia, Canada, August 2017, 5 pages.
+https://doi.org/10.1145/nnnnnnn.nnnnnnn
+
+1
+
+Laura Niss
+
+Michigan Tech Research Institute
+snkitche@mtu.edu
+
+INTRODUCTION
+
+Automated-decision making saves time and is implicitly assumed
+to prevent human bias. However, such automated decisions may
+unfortunately lead to unfair outcomes. Until recently, the use of
+∗ Presented
+
+as a poster at the 2017 Workshop on Fairness, Accountability, and Transparency in Machine Learning (FAT/ML 2017)
+Permission to make digital or hard copies of part or all of this work for personal or
+classroom use is granted without fee provided that copies are not made or distributed
+for profit or commercial advantage and that copies bear this notice and the full citation
+on the first page. Copyrights for third-party components of this work must be honored.
+For all other uses, contact the owner/author(s).
+FAT/ML 2017, August 2017, Halifax, Nova Scotia, Canada
+© 2017 Copyright held by the owner/author(s).
+ACM ISBN 978-x-xxxx-xxxx-x/YY/MM. . . $15.00
+https://doi.org/10.1145/nnnnnnn.nnnnnnn
+
+University of Utah
+suresh@cs.utah.edu
+
+automated-decision making has been largely unchecked. In pursuit
+of this goal, the first question that needs to be addressed is what
+“fairness" itself actually means and how to quantify it. A metaanalysis of the current literature indicates there are a multitude of
+inequivalent applications of the term, and consequently metrics.
+See, for example, [3] (which is based off of definitions in the seminal
+paper, [2]) for a general framework that encompasses notions of
+individual fairness and group fairness (“non-discrimination”).
+In this paper, we are particularly interested in how effects of
+bias compound in decision-making pipelines. While prior work in
+algorithmic fairness has focused on fairness of one decision, it is not
+immediately clear how fairness propagates throughout a compound
+decision making process. Complicated decisions usually require
+more than one decision. For example, a hiring process may include
+two decisions: from an applicant pool, one first decides who gets
+an interview, and the final hiring decision is made from the pool
+of interviewees. Although this is a relatively simple two-decision
+example, one can imagine a recursive-like compound decisionprocess where the outcome of one decision affects another and vice
+versa. For instance, perhaps to be brought in for an interview at
+company A, working for company B helps greatly, but working for
+company A also helps an applicant greatly to get an interview at
+company B.
+We ask the following questions:
+(1) Can a decision at point j in a decision pipeline correct for
+unfairness at point i < j?
+(2) How much fairness from point i is preserved in later points
+in the pipeline?
+(3) More specifically, how does the fairness from each stage
+contribute to the fairness of the final decision?
+Our contribution to the algorithmic fairness field is to highlight
+the need to study compound decision making processes by studying how composability and fairness interact. We emphasize that
+pipelines are useful to study because they decouple the intermediate decisions since there may be completely different parties with
+varying goals and mechanisms responsible for each decision. Perhaps suprisingly, even in the most basic example of a two-stage
+pipeline, we show under a (1 + ε)-equal opportunity definition of
+fair, the two stages cannot necessarily be combined as expected.
+Finally, pipelines set the stage for a number of interesting questions
+detailed in Section 4.1.
+
+FAT/ML 2017, August 2017, Halifax, Nova Scotia, Canada
+
+A. Bower, S. Kitchen, L. Niss, M. Strauss, A. Vargo, S. Venkatasubramanian
+
+2 FRAMEWORK
+2.1 Pipelines
+Definition 2.1 (Straight Pipeline). An n-stage (straight) pipeline
+P(f , д) on a set O is an ordered set of decision functions
+c1 → D 2 , . . . , fT : O × D
+
+F = { f1 : O → D1 , f2 : O × D
+T −1 → DT }
+ct = D k × D k +1 × · · · × D t −1 × D t for 1 ≤ kt ≤ t for
+where D
+t
+t
+t = 1, . . . ,T and rule functions
+{д1 : D 1 → {0, 1}, . . . , дT −1 : DT −1 → {0, 1}}
+where the final decision for x ∈ O is given by
+
+fˆT (x) дt ( fˆt (x)) = 1 ∀t ∈ [T − 1]
+P(f , д)(x) :=
+FAIL otherwise
+where for x ∈ O, fb1 (x) = f 1 (x) and for t = 2, . . . ,T , fˆt (x) =
+
+b
+ft (x, fc
+k t (x), fk t +1 (x), . . . , f t (x)). We will say decision function f t
+takes place at stage t of the pipeline for t = 1, . . . ,T .
+To understand the above definition, note that a straight pipeline
+P(f , д) on a set O (for instance, applicants to a job) takes input
+x ∈ O and applies a decision function on x. If the first decision
+(f 1 (x)), on x is satisfactory (where satisfactory is determined by д1 ),
+x is passed onto the next decision function and so on and so forth
+until there are no more decisions to be made (reaching fT ) or an
+intermediate stage declares an unsatisfactory decision (determined
+by some дt ) at which point no further decisions shall be made. Each
+subsequent decision function after the first may see some part of
+the past decisions prior in the pipeline (how many decisions back
+decision function ft can see back is determined by kt ).
+We expect the following variations and restrictions to be common with illustrative examples below:
+(1) Filtering pipeline. When each decision function ft is
+binary, take дt (0) = 0 and дt (1) = 1, i.e., only the positivedecision subset of previous stage gets passed on. In this
+case, we may use the notation P(f , д) in place of P f for
+concision.
+(2) Cumulative decisions pipeline. Take kt ≤ i, i.e., the decision at each stage agglomerates some score onto previous
+stages’ decision scores, so that each stage’s decision can
+depend on some of the previous decisions.
+(3) Informed pipeline. Each stage of the pipeline has summary statistics about the outcome of previous stages. In
+this paper, those statistics are implicit in the definition of
+ft . In particular, our notation above, while sufficient for
+this paper, is insufficient to study linked decisions in which
+each decision reacts to statistics about the other.
+The below diagram illustrates a two-stage pipeline, where the second decision can see what happened in the first decision on a given
+input:
+f1
+
+д1 (f 1 (x ))=1
+
+f2
+
+who receives an interview, and f 2 : O ×D 1 → D 2 = {0, 1} the hiring
+decision. Then P f (x) = fˆ2 (x) = f 2 (x, f 1 (x)) for all applicants x such
+that f 1 (x) = 1 (i.e. for all applicants who receive an interview), and
+0 (or FAIL) otherwise.
+
+2.2
+
+Fairness
+
+As we have stated, there is no consensus in the literature on the definition of fairness. However, there have been many recent proposed
+definitions. For simplicity, in order to illustrate how fairness propagates through a filtering pipeline, we will build on the definition of
+equal opportunity found in [4].
+Equal Opportunity. We consider the case of making a binary
+decision Ŷ ∈ {0, 1} and measure fairness with respect to a protected
+attribute A ∈ {0, 1} (such as age, gender, or race) and the true target
+outcome Y ∈ {0, 1}, which captures if an individual is qualified or
+not.
+Definition 2.3. As defined in [4], a binary predictor Ŷ satisfies
+equal opportunity with respect to A and Y if
+Pr{Ŷ = 1|A = 0, Y = 1} = Pr{Ŷ = 1|A = 1, Y = 1}.
+In other words, we make sure that the true positive rates are the
+same across a protected attribute. We usually think of A = 0 as a
+majority class.
+(1 + ε)-Equal Opportunity. Equal opportunity may be far too
+restrictive since it requires exact equality of two probabilities. In
+addition, because our goal is to measure how fairness propagates
+through a pipeline, we propose to quantify fairness relative to a
+majority class with an ε factor. In fact, we propose a framework
+that consists of boosting the minority class in order to correct for
+existing bias. Therefore, we introduce the notion of (1 + ε)-equal
+opportunity, which allows for compensation of inherent biases in
+training data.
+Definition 2.4 ((1 + ε)-equal opportunity). A binary predictor Ŷ
+satisfies (1 +ε)-equal opportunity with respect to A, Y , and majority
+class A = 0 if
+(1 + ε) Pr{Ŷ = 1|A = 0, Y = 1} ≤ Pr{Ŷ = 1|A = 1, Y = 1},
+where ε ∈ [0, 1) can be any real number such that
+(1 + ε) Pr{Ŷ = 1|A = 0, Y = 1} ∈ [0, 1].
+This definition generalizes to more than one protected class in a
+natural way: if A = {a 1 , . . . , am } and am represents the majority
+class, then Ŷ satisfies ((1 +ε 1 ), . . . , (1 +εm ))-equal opportunity with
+respect to A, Y , and am , if
+(1 + εt ) Pr{Ŷ = 1|A = am , Y = 1} ≤ Pr{Ŷ = 1|A = at , Y = 1}
+for t = i1, . . . , m − 1.
+
+That is, we make sure that the true positive rates in the protected
+class are 1 + ε times the rates in the majority class. The factor of
+д1 (f 1 (x ))=0
+(1+ε) could be determined, for example, by a Human-Resources proˆ
+P(f , д)(x) = FAIL
+P(f , д)(x) = f 2 (x) fessional or lawyer in order to correct known bias, past or present,
+whose mechanisms may not be fully understood. (The problem
+Example 2.2 (Hiring decisions as a two-stage filtering pipeline).
+of choosing ε properly is a much more difficult control problem,
+Let O be the applicant pool, f 1 : O → D 1 = {0, 1} the decision as to
+possibly involving feedback, and is deferred to later work.)
+x
+
+f 1 (x)
+
+(x, f 1 (x))
+
+f 2 (x, f 1 (x))
+
+Fair Pipelines
+
+2.3
+
+Why pipelines?
+
+Examples. We will now illustrate the utility of studying pipelines
+with a few examples. Many more examples have been identified in
+[5].
+(1) Hiring. Hiring for a job is at least a two-stage pipeline: (1)
+determine who to interview out of an applicant pool and
+(2) determine who to hire out of an interview pool. Hiring
+is also an example of a filtering pipeline since only those
+who have successfully got an interview are passed onto
+the interview stage. This pipeline can also be an example
+of a informed pipeline if the final stage gets information
+about the racial, gender, and age make-up of the applicant
+pool for instance.
+(2) Criminal Justice. Getting parole can be thought of as a
+three-stage pipeline: (1) compute a defendant’s risk assessment score, (2) if the defendant is convicted, determine the
+criminal’s sentencing, and (3) determine whether the criminal gets parole. This pipeline is an example of a cumulative
+decisions pipeline since the parole board has information
+about the risk assessment score and sentencing.
+(3) Mortgages Getting a mortgage for a home can be thought
+of as a looping pipeline. An applicant’s FICO score is used
+to determine whether they get a mortgage. However, an
+applicant’s FICO score is affected by prior credit and loan
+decisions, which also use the applicant’s FICO score.
+In the following, we show that (under specific circumstances)
+the fairness of a compound process can be guaranteed by making
+each link in the pipeline fair. This has the desirable implication that
+“global" fairness can be obtained via “local” fairness under these
+specific circumstances. In future work, we aim to develop a more
+general result that would guarantee fairness over the entire pipeline
+while allowing for each organization making one of the decisions
+in the pipeline to consider fairness only in its own decision.
+
+3
+
+RESULTS
+
+For the rest of the paper, we will focus on two-stage pipelines whose
+decision functions are binary decision functions, i.e., D 1 = D 2 =
+{0, 1}. We will usually refer to such a decision function as a binary
+predictor Ŷ .
+
+3.1
+
+Pipeline Fairness
+
+Consider a two-stage pipeline with binary predictors f 1 = X̂ and
+f 2 = Ŷ where again we take A = 0 to be the majority class and
+X and Y be the true target outcomes. Using the hiring scenario
+from above, for example, X̂ would represent the decision about
+whether or not to interview a candidate and Ŷ would represent the
+decision about whether or not to hire a candidate. If X = 1, then
+the candidate is qualified to get an interview; likewise, a candidate
+with Y = 1 is a good fit for the job.
+We define the pipeline to be (1 + α)-equal opportunity fair if the
+final decision is (1 + α)-equal opportunity fair:
+(1 + α) Pr{Ŷ = 1|Y = 1, A = 0} ≤ Pr{Ŷ = 1|Y = 1, A = 1}.
+Assuming
+
+FAT/ML 2017, August 2017, Halifax, Nova Scotia, Canada
+(1) (1 + ε) Pr{X̂ = 1|Y = 1, A = 0} ≤ Pr{X̂ = 1|Y = 1, A = 1},
+a nontrivial assumption that looks something like (1 + ε)equal opportunity for the first stage in the pipeline.
+(2) (1 + δ ) Pr{Ŷ = 1|X̂ = 1, Y = 1, A = 0} ≤ Pr{Ŷ = 1|X̂ =
+1, Y = 1, A = 1}, that is, (1 + δ )-equal opportunity for the
+second stage in the pipeline.
+(3) Ŷ = 1 =⇒ X̂ = 1.
+See Section 2.3 for a discussion of these assumptions. Then, we
+have that
+(1 + ε)(1 + δ ) Pr{Ŷ = 1|Y = 1, A = 0}
+= (1 + ε)(1 + δ ) Pr{Ŷ = 1, X̂ = 1|Y = 1, A = 0}
+= (1 + ε) Pr{X̂ = 1|Y = 1, A = 0}(1 + δ ) Pr{Ŷ = 1|X̂ = 1, Y = 1, A = 0}
+≤ Pr{X̂ = 1|Y = 1, A = 1} Pr{Ŷ = 1|X̂ = 1, Y = 1, A = 1}
+= Pr{Ŷ = 1, X̂ = 1|Y = 1, A = 1}
+= Pr{Ŷ = 1|Y = 1, A = 1}
+Therefore,
+(1 + ε)(1 + δ ) Pr{Ŷ = 1|Y = 1, A = 0} ≤ Pr{Ŷ |Y = 1, A = 1},
+so the pipeline is (1+ε)(1+δ ) = (1+ε +δ +o(ε +δ ))-equal opportunity
+fair and hence fairness is multiplicative over each stage under the
+above assumptions.
+A Toy Example. To provide insight into how a (1+ε)-equal opportunity decision at different stages of the pipeline affect outcomes,
+we give an example using the two-stage hiring model pipeline.
+Suppose a company wishes to interview 20 people, and hire 2
+of those 20. Assume 100 applicants apply, with 90 from a majority
+group and 10 from a minority group. Also assume the proportion
+of applicants qualified for the job are equal for both groups. For
+this simple example, we make the strong assumption that we have
+very good algorithms that choose only people qualified for the job,
+and that there are enough qualified applicants for each scenario.
+Define the interview, the first stage, as a (1+ε)-equal opportunity
+decision, and the hiring, the second stage, as a (1 + δ ) decision.
+Using the definitions from the above section with strict equality,
+our decisions satisfy:
+(1) (1 + ε) Pr{X̂ = 1|Y = 1, A = 0} = Pr{X̂ = 1|Y = 1, A = 1}
+(2) (1 + δ ) Pr{Ŷ = 1|X̂ = 1, Y = 1, A = 0} = Pr{Ŷ = 1|X̂ =
+1, Y = 1, A = 1}
+Table 1 and Figure 1 provide a numerical table and visual of four
+scenarios. Case one and two present a situation where a perceived
+bias is accounted for at different stages in the pipeline. Case three
+presents a scenario where an attempt to fix a bias is implemented
+at stage one, but is counterbalanced at stage two, and case four
+presents the reverse circumstance.
+One observation of note is that if one wishes to implement a (1 +
+ε)-decision to fix a perceived bias, the final outcome is independent
+of the stage at which the (1 + ε)-decision is made. Simulation shows
+that the variance of the final decision is also independent of the
+stage at which a decision is implemented.
+
+FAT/ML 2017, August 2017, Halifax, Nova Scotia, Canada
+
+A. Bower, S. Kitchen, L. Niss, M. Strauss, A. Vargo, S. Venkatasubramanian
+
+Table 1: Four Cases
+Case: ε, δ
+
+Expected
+majority
+interviewed
+
+Expected
+minority
+interviewed
+
+Expected
+majority
+hired
+
+Expected
+minority
+hired
+
+1: 2, 0
+
+15
+
+5
+
+1.5
+
+0.5
+
+2: 0, 2
+
+18
+
+2
+
+1.5
+
+0.5
+
+3: 2, -.666
+
+15
+
+5
+
+1.8
+
+0.2
+
+For an example, we return to the two-stage pipeline hiring example where the first stage of the pipeline determines who gets
+an interview and the second stage determines who gets hired. The
+interview stage may only care about someone’s resume to determine if they should be granted an interview. However, it’s not hard
+to imagine a case where a candidate is hiring qualified (Y = 1;
+they have the skills for the interview and job) but is not interview
+qualified (X = 0; their resume could be bad because they never
+received guidance on creating a good resume). Therefore, the issue
+seems to be with the specific ratio for i = 0, 1:
+
+4: -.666, 2
+
+19.28
+
+.71
+
+1.8
+
+0.2
+
+Pr{X̂ = 1|X = 1, A = i}
+Pr{X̂ = 1|Y = 1, A = i}
+
+.
+
+Ideally, we want these probabilities to be as close as possible so
+that we can decouple the pipeline. If not, being fair in the interview
+stage only based on interview qualifications and being fair in the
+hiring stage may not result in a pipeline that is fair.
+
+4
+
+Figure 1
+
+This may be important for future policy, as giving preference
+to a minority group during the interview is perhaps more publicly
+acceptable than giving higher preference to minorities during hiring.
+Additionally, instead of giving preference to the minority group to
+receive more interviews from the current unbalanced applicant pool,
+the same outcome can be achieved by recruiting more minority
+applicants.
+
+3.2
+
+Where Difficulties Lie
+
+Notice that, above we assume that fairness in the first stage of the
+pipeline to mean (1 + ε) Pr{X̂ = 1|Y = 1, A = 0} ≤ Pr{X̂ = 1|Y =
+1, A = 1} and fairness in the second stage to mean (1 + δ ) Pr{Ŷ =
+1|X̂ = 1, Y = 1, A = 0} ≤ Pr{Ŷ = 1|X̂ = 1, Y = 1, A = 1}. Fairness
+in stage two fits in the framework of equal opportunity since it’s a
+statement about an applicant getting hired given that the applicant
+is hiring-qualified and made it successfully through the first stage
+of the pipeline. Unfortunately, the first stage “fairness” assumption
+is a bit troublesome because it requires the first stage to make a
+decision based on the quality measured in the last stage. In a real
+world application, the first stage may be controlled by different
+mechanisms or goals than the last stage. In the context of a pipeline
+process where each portion is controlled by the same organization
+(or perhaps the portions are controlled by two sub-entities of the
+one organization), these assumptions make sense. However, there
+are many scenarios where this assumption will not be met.
+
+CONCLUSION
+
+In this work, we formalized the notion of a compound decision
+process called a pipeline, which is ubiquitous in domains like hiring, criminal justice, and finance. A pipeline decouples the final
+decision into intermediate decisions, which is important since although each decision affects the final outcome, different processes
+with different goals may be in charge of each intermediate stage.
+Decoupling allows us to see how fairness in each stage contributes
+to the fairness in the final decision.
+We also modified the definition of equal opportunity to allow
+boosting of the minority class and showed under what assumptions
+of fairness on the intermediate stages of the pipeline result in an
+overall fair pipeline according to this definition. In this case, the
+fairness from each stage of the pipeline is in some sense independent
+so that the entire pipeline has fairness factor given by the product.
+On the other hand, we would like to point out if the first stage is
+unfair, then the second stage cannot necessarily rectify the situation.
+For example, if the first stage grants interviews to just one or two
+from a minority class, then the second stage is limited to hiring
+both of them, which will not result in overall fairness. Therefore, it
+is important to get the first stage right.
+
+4.1
+
+Future Work
+
+We hope that our work highlights the need and sets the stage
+to understand compound decision making. We now give many
+directions for future research.
+Stability. In a straight pipeline, will a small amount of unfairness
+or bias in the beginning turn into a large amount of unfairness at
+the end?
+Bias as pipeline stage. In our main hiring example above, we
+composed two remedies to implicit bias. Alternatively, bias might
+be analyzed as a pipeline stage with parameter ϵ of sign opposite
+to the corresponding ϵ in the remedy stage.
+Transparency. How transparent can a pipeline be? One method
+to test is whether measuring transparency by qualitative input
+influence [1] is cumulative, and how it differs by the type of pipeline.
+
+Fair Pipelines
+Does one need information at each stage, or is it sufficient to have
+good information of only the final decision?
+Variance and small pools. We can ask that the expected rate of
+positive decisions for a subclass be (approximately) proportional
+to that class’s presence in the population. But, as with reliable
+randomized algorithms, we really want the outcomes to concentrate
+at (or near) the expectation with high probability. If a protected class
+is tiny, then small aberrations may cause an outcome far from the
+mean, with relatively large probability. In the context of pipelines,
+after asking whether means are preserved through pipelines, we
+can ask whether concentration is preserved. As in the case with
+randomized algorithms, it is sometimes appropriate to distort the
+mean to preserve concentration.
+Feedback loops. More generally, some situations involve many
+interacting decisions, possibly with feedback loops. Under what
+circumstances can each decision be made autonomously, with some
+guarantee that the system will converge to meet some overall guarantee of fairness? For example, early in the days of long-distance
+running, just after women were allowed to enter major marathons
+without restriction, fewer women than men chose to do so at the
+elite level. Some race organizers—on the assumption that the sport
+should attract women and men equally—offered an equal total
+purse (say, for the top ten spots) for each of the men’s and women’s
+races and, since fewer women entered, those who did chased a
+larger expected individual payout. Policies like these are designed
+to lure more women elites the following year. What if the process
+is decelerated, say, by offering a purse proportional to the square
+root of the participation rate, e.g., with initial participation√rates
+√ of
+√
+r 0 : r 1 given by 10:90, the purse is proportional to r , so .1: .9,
+which is 25:75? What if the process is accelerated, by offering a
+purse proportional to 1/r , so 1/.1 : 1/.9, about 9:1, reversing the
+participation ratio? Note that, for these types of incentives, Teither
+class needs to be marked as protected, which may be desirable,
+though the goal of equal participation must be assumed. Typically
+(but depending on the strength of the economic signal to incentivize
+√
+future runners), r has an attractive fixed point at 50:50 and 1/r
+has a repulsive fixed point at 50:50. Under appropriate assumptions,
+we can pose a purely mathematical question: What is the least
+function д(r ) (or give a bound on д) that leads to an attractive fixed
+point? By analogy with cryptography, can such systems (with or
+without loops) be tolerant to a bounded number of unfair players?
+Or bounded "total amount of unfairness," distributed among all the
+players and not otherwise quantified or understood?
+Definitions of fairness. To return to the elite runners example,
+we may need refined definitions of fairness, say, "interim fairness,"
+that captures increased year-over-year participation of an underrepresented class, and calls the improvement "interim fair" even
+if the system has not yet converged to a fair state. As for hiring,
+suppose a University department only hires faculty from a pool
+of recent PhDs, which is unbalanced. If the hiring process selects
+underrepresented faculty at a far higher rate than their presence
+in the PhD pool, that should be deemed "interim fair" for some
+purposes.
+
+FAT/ML 2017, August 2017, Halifax, Nova Scotia, Canada
+Different notions of fairness. Furthermore, we would like to understand how different definitions of fairness other than (1+ε)-equal
+opportunity propagate through a pipeline.
+
+ACKNOWLEDGEMENT
+This material is based upon work supported by the National Science
+Foundation Graduate Research Fellowship under Grant No. DGE
+1256260 as well as by the NSF grants CCF-1161233 and IIS-1633724.
+
+REFERENCES
+[1] A. Datta, S. Sen, and Y. Zick. 2016. Algorithmic Transparency via Quantitative
+Input Influence: Theory and Experiments with Learning Systems. In 2016 IEEE
+Symposium on Security and Privacy (SP). 598–617. https://doi.org/10.1109/SP.
+2016.42
+[2] Cynthia Dwork, Moritz Hardt, Toniann Pitassi, Omer Reingold, and Richard S.
+Zemel. 2011. Fairness Through Awareness. CoRR abs/1104.3913 (2011). http:
+//arxiv.org/abs/1104.3913
+[3] Sorelle A. Friedler, Carlos Scheidegger, and Suresh Venkatasubramanian. 2016.
+On the (im)possibility of fairness. CoRR abs/1609.07236 (2016). http://arxiv.org/
+abs/1609.07236
+[4] Moritz Hardt, Eric Price, and Nathan Srebro. 2016. Equality of Opportunity in
+Supervised Learning. CoRR abs/1610.02413 (2016). https://arxiv.org/abs/1610.
+02413
+[5] C. O’Neil. 2016. Weapons of Math Destruction: How Big Data Increases Inequality
+and Threatens Democracy. Crown/Archetype. https://books.google.com/books?
+id=NgEwCwAAQBAJ
+
+

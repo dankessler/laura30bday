@@ -1,0 +1,1903 @@
+What You See May Not Be What You Get:
+UCB Bandit Algorithms Robust to ε-Contamination
+
+arXiv:1910.05625v2 [stat.ML] 24 Feb 2020
+
+Laura Niss, Ambuj Tewari
+University of Michigan
+
+Abstract
+Motivated by applications of bandit algorithms in education, we consider a stochastic multi-armed bandit problem
+with ε-contaminated rewards. We allow an adversary to
+give arbitrary unbounded contaminated rewards with full
+knowledge of the past and future. We impose the constraint that for each time t the proportion of contaminated
+rewards for any action is less than or equal to ε. We derive
+concentration inequalities for two robust mean estimators
+for sub-Gaussian distributions in the ε-contamination context. We define the ε-contaminated stochastic bandit problem and use our robust mean estimators to give two variants of a robust Upper Confidence Bound (UCB) algorithm, crUCB. Using regret derived from only the underlying
+√ stochastic rewards, both variants of crUCB achieve
+O( KT log T ). Our simulations are designed to reflect
+reasonable settings a teacher would experience when implementing a bandit algorithm. We show that in certain
+adversarial regimes crUCB not only outperforms algorithms designed for stochastic (UCB1) and adversarial bandits (EXP3) but also those that have “best of both worlds”
+guarantees (EXP3++ and TsallisInf) even when our constraint on the proportion of contaminated rewards is broken.
+
+1
+
+INTRODUCTION
+
+We first review the problem of stochastic multi-armed bandits (sMAB) with contaminated rewards, or contaminated
+stochastic bandits (CSB). This scenario assumes that rewards associated with an action are sampled i.i.d. from a
+fixed distribution and that the learner observes the reward
+after an adversary has the opportunity to contaminate it.
+The observed reward can be unrelated to the reward distribution and can be maliciously chosen to fool the learner.
+An outline for this setup is presented in Section 2.
+We are primarily motivated by the use of bandit algorithms in education, where the rewards often come directly from human opinion. Whether responses come from
+1
+
+undergraduate students, a community sample, or paid participants on platforms like MTurk, there is always reason
+to believe some responses are careless or inattentive to
+the question or could be assisted by bots (Curran, 2016;
+Necka et al., 2016).
+An example in education is a recent paper testing bandit Thompson sampling to identify high quality student
+generated solution explanations to math problems using
+MTurk participants (Williams et al., 2016). Using a rating
+between 1-10 from 150 participants, the results showed
+that Thompson sampling identified participant generated
+explanations that when viewed by other participants significantly improved their chance of solving future problems compared to no explanation or “bad” explanations
+identified by the algorithm. While the proportion of contaminated responses will always depend on the population, recent work suggests when already using checks for
+fraudulent participants, between 2−30% of MTurk participants give low-quality samples (Ahler, Roush, and Sood,
+2019; Necka et al., 2016; Ryan, 2018). This is consistent
+with measurements of careless and inattentive responses
+seen in survey data, which reports 1 − 30% with an estimated mode of 8−12%, with the conclusion that these responses are generally not a random sample (Curran, 2016).
+Accounting for these low quality responses is especially
+relevant in educational setting where the number of iterations an algorithm can run is often significantly smaller
+than those used by big tech (e.g. advertising).
+Recent work in CSB has various assumptions on the
+adversary, the contamination, and the reward distributions.
+Many papers require the rewards and contamination to be
+bounded (Gupta, Koren, and Talwar, 2019; Kapoor, Patel, and Kar, 2018; Lykouris, Mirrokni, and Leme, 2018).
+Others don’t require boundedness, but do assume that the
+adversary contaminates uniformly across rewards (Altschuler,
+Brunel, and Malek, 2019). All works make some assumption on the number of rewards for an action an adversary
+can contaminate. We discuss previous work more thoroughly in section 3.
+Our work expands on these papers by allowing for a
+
+full knowledge adaptive adversary that can give unbounded
+contamination in any manner. However, there is a trade
+off when compared to work assuming bounded rewards
+and contamination: we require an estimate of the upper
+bound on the reward variance. This can often allow for
+simpler implementation than some algorithms that require
+boundedness, as we will discuss in section 4. Our constraint on the adversary is that for some fixed ε, no more
+than ε proportion of rewards for an action are contaminated. We provide a ε-contamination robust UCB algorithm by first proving concentration inequalities for two
+robust mean estimators in the ε-contamination context.
+We are able to show that the regret of our algorithm
+anap
+lyzed on the true reward distributions is O( KT log T )
+provided that the contamination proportion is small enough.
+Through simulations, we show that with a Bernoulli adversary, our algorithm outperforms algorithms designed
+for stochastic (UCB1) and adversarial bandits (EXP3) as
+well as those that have “best of both worlds” guarantees
+(EXP3++ and TsallisInf) even when our constraint on the
+adversary is broken.
+Though we are motivated by of bandit algorithms applications in education and use this context to determine
+appropriate parameters in the simulations, we point out
+opportunities for CSB modeling to arise in other contexts
+as well.
+
+2
+
+PROBLEM SETTING
+
+Here we specify our notation and present the ε-contaminated
+stochastic bandit problem. We then argue for a specific
+notion of regret for CSB. We compare our setting to others current in the field in section 3.
+Notation We use [K] to represent {1, ..., K} for K ∈ R
+to represent the number of actions and the indicator function I{·} to be 1 if true and 0 otherwise. Let Na (t) be
+the number of times action a has been chosen at time t
+and xa (t) = {xa (1), ..., xa (Na (t))} to be the vector of
+all observed rewards for action a at time t. The suboptimality gap for action a is ∆a and we define ∆min =
+mina∈[K] ∆a .
+
+2.1 ε-CONTAMINATED STOCHASTIC BANDITS
+
+A basic parameter in our framework is ε, the fraction of
+rewards for an action that the adversary is allowed to contaminate. Before play, the environment picks a true reward ra (t) ∼ Da from fixed distribution Da for all a ∈
+[K] and t ∈ [T ]. The adversary observes these rewards
+and then play begins. At time t = 1, 2, ..., T the learner
+chooses an action At ∈ [K] . The adversary sees At then
+chooses an observed reward xAt (t) and then the learner
+observes only xAt (t).
+Human feedback: There is always a chance that huWe present the contaminated stochastic bandits game
+man feedback is careless or inattentive, and therefore is in algorithm 1.
+not representative of the underlying truth related to an action. This may appear in online surveys that are used for
+Algorithm 1: Contaminated Stochastic Bandits
+A/B testing, or as is the case above in the explanation geninput: Number of actions K, time horizon T .
+eration example.
+fix : ra (t) ∀a ∈ [K], t ∈ [T ].
+Adversary observes fixed rewards.
+for t = 1, ..., T do
+Click fraud: Internet users who wish to preserve priLeaner picks action At ∈ [K].
+vacy can intentionally click on ads to obfuscate their true
+Adversary observes At and chooses xAt (t).
+interests either manually or through browser apps. SimLearner observes xAt (t).
+ilarly, malware can click on ads from one company to
+end
+falsely indicate high interest, which can cause higher rankings in searches or more frequent use of the ad than it
+would otherwise merit (Crussell, Stevens, and Chen, 2014;
+We allow the adversary to corrupt in any fashion as
+Pearce et al., 2014).
+long as for every time t there is no more than an ε-fraction
+of contaminated rewards for any action. That is, we constrain the adversary such that,
+Measurement errors: If rewards are gathered through
+Na (t)
+X
+some process that may occasionally fail or be inaccurate,
+∀a
+∈
+[K],
+∀t
+∈
+[T
+],
+I{ra (i) 6= xa (i)} ≤ ε · Na (t).
+then the rewards may be contaminated. For example, in
+i=1
+health apps that use activity monitors, vigorous movement
+of the arms may be perceived as running in place (Bai et We allow the adversary to give unbounded contamination
+al., 2018; Feehan et al., 2018).
+that can be chosen with full knowledge of the learner’s
+2
+
+history as well as current and future rewards. This setting
+allows the adversary to act differently across actions and
+place no constraints on the contamination itself, but rather
+the rate of contamination.
+
+2.2
+
+rewards such that the learner cannot achieve sublinear worstcase regret (Lattimore, 2018). Algorithms such as EXP3
+(Auer, Nicolò Cesa-Bianchi, et al., 2002) are thus randomized, but their regret is analysed with respect to the
+best fixed action where “best” is defined using the observed rewards. There are no theoretical guarantees with
+respect to the uncontaminated regret, so it is not immediately clear how they will perform in a CSB problem.
+We remark that adversarial analysis assumes uniformly
+bounded observed rewards whereas we allow observed rewards to be unbounded. Additionally, the general adversarial framework does not take advantage of the structure
+present in CSB, namely that the adversary can only corrupt a small fraction of rewards, so it likely that performance improvements can be make.
+
+NOTION OF REGRET
+
+A traditional goal in bandit learning is to minimize the
+observed cumulative regret gained over the total number
+of plays T . Because the adversary in this model can affect
+the observed cumulative regret, we argue to instead use
+a notion of regret that considers only the underlying true
+rewards. We call this uncontaminated regret and give the
+definition below for any time T and policy π in terms of
+the true rewards r,
+X
+
+T
+T
+X
+R̄T (π) = max E
+ra (t) −
+rAt (t) .
+a∈[K]
+
+t=1
+
+(2.1)
+
+3.2
+
+A developing line of work is algorithms that enjoy “best
+of both worlds” guarantees. That is, they perform well
+in both stochastic and adversarial environments without
+knowing a priori which environment they will face. Early
+work in this area Auer and Chiang, 2016; Bubeck and
+Slivkins, 2012 started by assuming a stochastic environment and implementing some method to detect a failure of
+the i.i.d. assumption, at which point the algorithm switches
+to an algorithm for the adversarial environment for the
+remainder of iterations. Further work implements algorithms that can handle an environment that is some mixture of stochastic and adversarial, as in EXP3++ and TsallisInf (Seldin and Slivkins, 2014; Zimmert and Seldin,
+2019).
+While these algorithms are aimed well for a stochastic
+environment with some adversarial rewards, they differ
+from contamination robust algorithms in that all observed
+rewards are thought to be informative. Therefore, their
+uncontaminated regret has not been analysed and there are
+no guarantees in the CSB setting.
+
+This definition eq. (2.1) is first mentioned in Kapoor, Patel, and Kar, 2018 along with another notion of regret
+that compares the sum of the observed (possibly contaminated) rewards to the sum of optimal, uncontaminated rewards,
+
+X
+T
+T
+X
+xAt (t) .
+ra (t) −
+R̄T (π) = max E
+a∈[K]
+
+t=1
+
+(2.2)
+
+t=1
+
+We argue that eq. (2.2) gives little information about the
+performance of an algorithm. This notion of regret can
+be negative, and with no bounds on the contamination it
+can be arbitrarily small and potentially meaningless. We
+believe that any regret that compares a true component
+to an observed (possibly contaminated) component is not
+a useful measure of performance in CSB as it is unclear
+what regret an optimal strategy should produce.
+
+3
+
+BEST OF BOTH WORLDS
+
+t=1
+
+RELATED WORK
+
+We start by briefly addressing why adversarial and “best 3.3 CONTAMINATION ROBUST STATISof both world” algorithms are not optimized for CSB. We
+TICS
+then cover relevant work in robust statistics, followed by
+current work in robust bandits and how our model differs The ε-contamination model we consider is closely related
+to the one introduced by Huber in 1964 (Huber, 1964).
+and relates.
+Their goal was to estimate the mean of a Gaussian mixture model where ε fraction of the sample was not sam3.1 ADVERSARIAL BANDITS
+pled from the main Gaussian component. There has been
+Adversarial bandits with an oblivious environment allows a recent increase of work using this model, especially in
+the adversary to first look at the learners policy and then extensions to the high-dimensional case (Diakonikolas et
+choose all rewards before the game begins. If the learner al., 2019, Kothari, Steinhardt, and Steurer, 2018, Lai, Rao,
+chooses a deterministic policy, the adversary can choose and Vempala, 2016, L. Liu, Li, and Caramanis, 2019).
+3
+
+These works often keep the assumption of a Gaussian retical guarantees and simulations of the affects an advermixture component, though there has been expanding work sary can have on these two algorithms when the adversary
+with non-Gaussian models as well.
+does not know the optimal action but is otherwise fully
+adaptive. They show these standard algorithms are susceptible to contamination. Similar work looks at contami3.4 CONTAMINATION ROBUST BANDITS nation in contextual bandits with a non-adaptive adversary
+(Ma et al., 2019).
+Some of the first work in CSB started by assuming both
+rewards and contamination were bounded (Gupta, Koren,
+and Talwar, 2019; Lykouris, Mirrokni, and Leme, 2018). 4 MAIN RESULTS
+These works assume an adversary that can contaminate at
+any time step, but that is constrained in the cumulative We present concentration bounds for both the α-shorth
+contamination. That is, the cumulative absolute differ- and α-trimmed mean estimators in the ε-contamination
+ence of the contaminated
+reward, x, to the true reward, context for sub-Gaussian random variables.
+P
+r, is bounded, |rAt (t) − xAt (t)| ≤ C. Lykouris et. al.
+Our contribution to the CSB problem is in providing
+provides a layered UCB-type active arm elimination al- a contamination robust UCB algorithm that is simple to
+gorithm. Gupta expands on this work to provide an algo- implement and has theoretical regret guarantees close to
+rithm similar to active arm elimination in spirit, but which those of UCB algorithms in the uncontaminated setting.
+never completely eliminates an action, and which has better regret guarantees.
+Recent work in implementing a robust UCB replaces 4.1 CONTAMINATION ROBUST MEAN ESthe empirical mean with the empirical median, and gives
+TIMATORS
+guarantees for the uncontaminated regret with Gaussian
+rewards (Kapoor, Patel, and Kar, 2018). They consider The estimators we analyse have been in use for many
+an adaptive adversary but require the contamination to be decades as robust statistics. Our contribution is to anabounded, though the bound need not be known. They cite lyze them within our ε-contamination model and provide
+work that can expand their robust UCB to distributions simple finite-sample concentration inequalities for ease of
+with bounded fourth moments by using the agnostic mean use in UCB-type algorithms.
+(Lai, Rao, and Vempala, 2016), though give no uncontaminated regret guarantees. In one dimension, the agnostic 4.1.1 Trimmed Mean
+mean takes the mean of the smallest interval containing
+(1 − ε) fraction of points. This estimator is also known Our first estimator suggested for use in the contaminated
+as the α-shorth mean. Our work expands on this model model is the α-trimmed mean (L. Liu, Li, and Caramanis,
+by allowing for unbounded contamination and analysing 2019).
+the uncontaminated regret for sub-Gaussian rewards when
+implementing a UCB algorithm with the α-shorth mean. α-trimmed mean Trim the smallest and largest α-fraction
+CSB has also been analysed in the best arm identi- of points from the sample and calculate the mean of the
+fication problem (Altschuler, Brunel, and Malek, 2019). remaining points. This estimator uses 1 − 2α fraction of
+Using a Bernoulli adversary that contaminates any reward sample points.
+with probability ε, Altschuler et. al. consider three adversaries of increasing power, from the oblivious adversary,
+Algorithm 2: α-Trimmed Mean
+which does not know the player’s history nor the current
+input : Xn = (x1 , ..., xn ), α
+action or reward, to a malicious adversary, which can conoutput: α-trimmed mean
+taminate knowing the player’s history and the current ac(x(1) , ..., x(n) ) = sorted Xn s.t. x(i) ≤ x(i+1)
+tion and reward. They give analysis of the probability of
+cut = dα ∗ ne
+best arm selection and sample complexity of an active arm
+return mean(x(cut) , ..., x(n-cut) )
+elimination algorithm. While their performance measure
+is different than ours, we generalize their context to allow
+an adversary to contaminate in any fashion.
+The intuition being if the contamination is large, then
+There is also work that explores adaptive adversarial it will be removed from the sample. If it is small, it should
+contamination on ε-greedy and UCB algorithms (Jun et have little affect on the mean estimate. Next we provide
+al., 2018). They give a thorough analysis with both theo- the concentration inequality for the α-trimmed mean.
+4
+
+Theorem 1 (Trimmed mean concentration). Let G be the with probability at least 1 − δ1 − δ2 . Letting δ1 = t22 and
+set of points x1 , ...xn ∈ R that are drawn from a σ-sub- δ2 = t22 , and assuming α ≥ ε, we have,
+Gaussian distribution with mean µ. Let Sn be a sample
+where an ε-fraction of these points are contaminated by
+|trMeanα (Sn ) − µ|
+r
+
+an adversary. For ε ≤ α < 1/2, t ≥ n we have,
+p
+4
+σ
+≤
+log(t) + 4α 6 log(t)
+(1 − 2α)
+n
+|trMeanα (Sn ) − µ| ≤
+
+r
+p
+4
+σ
+log(t) + 4α 6 log(t)
+(1 − 2α)
+n
+with probability at least 1 − t42 .
+with probability at least 1 − t42 .
+Proof. Our proof techniques are adapted from L. Liu, Li,
+and Caramanis, 2019.
+Let Gn be the set of points xi , ...xn ∈ R that are
+drawn from a σ-sub-Gaussian distribution. Without loss
+of generality assume µ = 0. Let Sn be a sample where an
+ε-fraction of these points are contaminated by an adversary.
+Let G̃ ⊂ Gn represent the points which are not contaminated and C ⊂ Gn represent the contaminated points.
+Then our sample can be represented by the union Sn =
+G̃ ∪ C. Let R represent the points that remain after trimming α fraction of the largest and smallest points, and T
+be the set of points that were trimmed. Then we have,
+
+A more detailed proof can be found in appendix A.1
+4.1.2
+
+Lai’s (2016) agnostic mean, which we use the more common term α-shorth mean for, can be considered a variation of the trimmed mean.
+α-shorth mean Take the mean of the shortest interval
+that removes the smallest δ1 and largest δ2 fraction of
+points such that δ1 + δ2 = α, where δ1 , δ2 are chosen
+to minimize the interval length of remaining points. Uses
+1 − α fraction of sample points.
+The α-shorth mean is less computationally efficient
+than the trimmed mean, but may be a better mean estimator when the contaminated points are not large outliers
+and are skewed in one direction. Intuitively this is because
+the α-shorth mean can trim off contamination that would
+require removing most of the sample with the trimmed
+mean. Next we provide the concentration inequality for
+the α-shorth mean.
+
+X
+1
+x
+(1 − 2α)n
+
+|trMeanα (Sn )| =
+
+x∈R
+
+1
+≤
+(1 − 2α)n
+
+ X
+
+x +
+
+X
+
+x +
+
+X
+
+
+x
+
+x∈G̃
+
+x∈G̃∩T
+
+x∈C∩R
+
+| {z }
+
+| {z }
+
+| {z }
+
+A1
+
+A2
+
+A3
+
+with
+A1 ≤
+
+X
+
+X
+
+x +
+
+x∈Gn
+
+x
+Algorithm 3: α-Shorth Mean
+input : Xn = (x1 , ..., xn ), α
+output: A mean estimate for the distribution of X
+(x(1) , ..., x(n) ) = sorted Xn s.t. x(i) ≤ x(i+1)
+nα = b(1 − α) ∗ nc
+I ∈ argmink {x(k+nα ) − x(k) }
+Choose uniformly at random from set I if there is
+more than one starting index with the smallest
+interval length
+return sMean(X) ← mean(x(I) , ..., x(I+nα ) )
+
+x∈Gn \G̃
+
+≤ n|x̄Gn | + εn| max xi |
+i∈[n]
+
+w.p. at least 1 − δ1 − δ2 ,
+
+A2 ≤ 2αn max |xi |
+
+w.p. at least 1 − δ2 ,
+
+A3 ≤ εn max |xi |
+
+w.p. at least 1 − δ2 .
+
+i∈[n]
+
+i∈[n]
+
+Shorth Mean
+
+Combining we get,
+|trMeanα (Sn ) − µ|
+
+
+1
+|x̄Gn | + max |xi |(2ε + 2α)
+(1 − 2α)
+i∈[n]
+
+
+1
+|x̄Gn | + max |xi |(4α)
+≤
+(1 − 2α)
+i∈[n]
+r
+r
+
+σ
+2
+2
+2t
+≤
+log
++ 4α 2 log
+(1 − 2α)
+n
+δ1
+δ2
+≤
+
+Theorem 2 (α-shorth mean concentration). Let Gn be the
+set of points x1 , ...xn ∈ R that are drawn from a σ-subGaussian distribution with mean µ. Let Sn be a sample
+where an ε-fraction of these points are contaminated by
+5
+
+∆min√
+ε ≤ α ≤ 4(∆ +4σ
+, we have the uncontamimin
+0 6 log T )
+nated regret bound,
+
+an adversary. For ε ≤ α < 1/3, t ≥ n, we have,
+|sMeanα (Sn ) − µ| ≤
+r
+4
+(6α − 8α2 )σ p
+σ
+log t +
+6 log t
+1 − 2α n
+(1 − 2α)(1 − α)
+with probability at least 1 −
+
+R̄(U CB) ≤ 8σ0
+
+KT log T +
+
+X
+
+15∆a .
+
+4
+t2 .
+
+Corollary 1 (α-trimmed mean crUCB uncontaminated regret bounded rewards). If the rewards are bounded by b,
+min
+and have contamination rate ε ≤ α ≤ 4(∆∆min
++4b) , then
+
+Proof is contained in the appendix and follows a similar approach as shown for the trimmed mean.
+Our methods ensured that the first term in each concentration bound is the same, giving them similar regret
+guarantees when implemented in a UCB algorithm. We
+emphasize that the α-shorth mean uses 1 − α fraction of a
+sample while the α-trimmed mean uses 1 − 2α fraction of
+a sample. We remark that if there is no contamination and
+α = 0 then our inequalities reduce to the standard concentration inequality for the empirical mean of samples
+drawn from a sub-Gaussian distribution.
+
+4.2
+
+p
+
+R̄T ≤ 8σ0
+
+p
+
+KT log(T ) +
+
+X
+
+15∆a .
+
+Theorem 4 (α-shorth mean crUCB uncontaminated regret). Let K > 1 and T ≥ K − 1. Then with algorithm
+4 with the α-shorth mean, sub-Gaussian reward distributions with σa ≤ σ0 , and contamination rate ε ≤ α ≤
+∆min√
+, we have the uncontaminated regret
+4(∆min +9σ0 6 log T )
+bound,
+
+CONTAMINATION ROBUST UCB
+
+We present the contamination robust-UCB (crUCB) algorithm for ε-CSB with sub-Gaussian rewards.
+
+R̄(U CB) ≤ 8σ0
+
+Algorithm 4: crUCB
+input: number of actions K, time horizon T , upper
+bound on fraction contamination α, upper
+bound on sub-Gaussian constant σ0 , mean
+estimate function (α trimmed or shorth
+mean) f .
+for t ≤ K do
+Pick action a when t = a.
+end
+for t > K do
+for a ∈ [K] compute do
+f (xa (t)) ← mean estimate of rewards.
+Na (t) ← number of times action has been
+played.
+end
+Pick action At =
+q
+
+log(t)
+σ0
+4N
+.
+argmaxa∈[K] f (xa (t)) + (1−2α)
+a (t)
+
+p
+
+KT log T +
+
+X
+
+15∆a .
+
+Corollary 2 (α-shorth mean crUCB uncontaminated regret bounded rewards). If the rewards are bounded by b,
+min
+and have contamination rate ε ≤ α ≤ 4(∆∆min
++9b) , then
+R̄T ≤ 8σ0
+
+p
+
+KT log(T ) +
+
+X
+
+15∆a .
+
+Proofs for theorem 3 and 4 and their corollaries follow
+standard analysis and are provided in appendix A.5.
+From theorem 3 and 4 we get that crUCB has the same
+order of regret in the CSB setting as UCB1 has in the standard sMAB setting. The constraint on the magnitude of ε
+is quite strong, but we show in section 5 that they can be
+broken and still obtain good empirical performance.
+
+Remark Our bounds above do not allow ε to be too big
+relative to the minimum suboptimality gap ∆min . This
+is natural: if ε > ∆min then no algorithm can get sublinear regret since distinguishing between the top two acObserve reward xAt (t).
+tions is statistically impossible even with infinite samples.
+end
+We give a simple example in appendix B. Furthermore,
+√
+it is possible to derive a regret bound1 of Õ(σ0 KT +
+ασ0
+We provide uncontaminated regret guarantees for crUCB 1−4α
+T ) for any choice of α such that ε ≤ α < 1/4. The
+below for both the α-trimmed and the α-shorth mean.
+linear term in regret (which is unavoidable for large ε)
+Theorem 3 (α-trimmed mean crUCB uncontaminated re- may be acceptable if the corruption proportion is not very
+gret). Let K > 1 and T ≥ K − 1. Then with algo- large.
+1 The Õ(·) notation hides constants and logarithmic terms. See aprithm 4 with the α-trimmed mean, σ-sub-Gaussian reward distributions with σa ≤ σ0 , and contamination rate pendix B for details.
+
+6
+
+5
+
+SIMULATIONS
+
+We compare our crUCB algorithms using the trimmed
+mean (tUCB) and shorth mean (sUCB) against a standard stochastic algorithm (UCB1, Auer and Nicolo CesaBianchi, 2002), a standard adversarial algorithm (EXP3,
+Auer, Nicolò Cesa-Bianchi, et al., 2002), two “best of
+both worlds” algorithms (EXP3++, Seldin and Lugosi,
+2017, 0.5-TsallisInf, Zimmert and Seldin, 2019), and another contamination robust algorithm (RUCB-MAB, Kapoor,
+Patel, and Kar, 2018). Each trial has five actions (K = 5),
+is run for 1000 iterations (T = 1000), for ε ∈ {0.05, 0.1}.
+For sUCB and tUCB, we set α = ε and σ0 = σ. The plots
+are average results over 10 trials with error bars showing
+the standard deviation.
+Our choice of T comes from our motivation to apply
+contaminated bandits in education, where the sample sizes
+are often much smaller than for example in advertising.
+While T = 1000 would be considered a large university
+class, it still allows one to visually see regret for smaller
+iterations and see how performance stabilizes. We similarly chose number K of arms and proportion contamination ε to be in a realistic range for the application we have
+in mind. All algorithms use recommended parameter settings given within their respective papers.
+
+(a) ε = 0
+
+(b) ε = 0.05
+
+Rewards and gaps We chose the reward distribution to
+be binomial(n=10) to simulate likert scale and because
+this distribution has bounded rewards and is not symmetric for large p. For the optimal action, p = .9 and for
+suboptimal actions p = .8, thus the suboptimality gap is
+∆ = 1. All non-optimal actions have the same true distribution.
+Adversaries We focus on a Bernoulli adversary which
+gives a contaminated reward at every time step with probability ε. We also implement a cluster adversary which
+contaminates at the beginning of play to show the weakness of algorithms to this type of attack.
+
+(c) ε = 0.1
+
+Contamination We use a random contamination scheme Figure 1: Binomial Rewards With Varying Proportion Of
+which chooses a contaminated reward uniformly from rangesContamination
+that increase suboptimal action means and decrease the
+optimal action’s mean.
+the UCB type algorithms. In fig. 1, we see the best of
+Performance measurement We plot the average regret these, TsallisInf, starts to degrade as the proportion of
+contamination increases while the robust UCB algorithms
+over 10 trials for 1000 iterations.
+are only slightly affected. These simulations show a clear
+We recommend to view the plots on a color screen.
+In fig. 1a we see that the adversarial and best of both performance benefit to using algorithms that specifically
+worlds algorithms, EXP3, EXP3++, and TsallisInf, per- account for contaminated rewards.
+Figure 3 and fig. 4 shows that for both sUCB and
+form poorly in the purely stochastic setting compared to
+7
+
+(a) α = 0
+
+(a) sUCB
+
+(b) α = 0.05
+
+(b) tUCB
+
+Figure 3: Regret Sensitivity For α.
+
+To look at the impact of using a contamination robust
+algorithm when there is no contamination, we plotted various α values when ε = 0, shown in fig. 2. Assuming
+small amounts of contamination when there is none only
+has a small impact on performance, suggesting it is permissible to use contamination robust methods when there
+is uncertainty of contamination. Similarly, small K and
+large ∆ can render bounded contamination impotent and
+would not require algorithms that account for it.
+We have included RUCB-MAB in our simulations because it is simple to implement and can perform similarly
+well to our algorithms. We note it currently has guarantees only for Gaussian rewards (Kapoor, Patel, and Kar,
+2018).
+Figure 5 shows the poor performance of all algorithms
+when the first ε rewards are contaminated. TsallisInf and
+EXP3++ show some recovery, but it is clear this type of
+adversary is harmful. This remains an open problem for
+scenarios with small T .
+We also considered including the BARBAR algorithm
+(Gupta, Koren, and Talwar, 2019) whose epoch scheme is
+
+(c) α = 0.1
+
+Figure 2: Misspecified α For ε = 0.
+
+tUCB, the choice of α is much less sensitive than choice
+of σ. Over estimating or slightly underestimating α does
+not degrade performance significantly. Underestimating σ
+can give a significant boost to performance while over estimating can degrade it. This is consistent with the performance of UCB algorithms in practice, which often scale
+the exploration term to improve empirical performance
+(Y.-E. Liu et al., 2014).
+8
+
+6
+
+DISCUSSION
+
+We have presented two variants of an ε-contamination robust UCB algorithm to handle uninformative or malicious
+rewards in the stochastic bandit setting. As the main contribution, we proved concentration inequalities for the αtrimmed and α-shorth mean in the ε-contamination setting and guarantees on the uncontaminated regret of the
+crUCB algorithms. The regret guarantees are similar to
+those in the uncontaminated sMAB setting.
+We have shown through simulation that these algorithms can outperform “best of both worlds” algorithms
+and those for stochastic or adversarial environments when
+using a small number of iterations and ε chosen to be reasonable when implementing bandits in education.
+We highlight that our algorithms are simple to implement. In practice, it is often easy to find upper bounds on
+the parameters which are robust to underestimation. Our
+algorithms are numerically stable and have clear intuition
+to their actions.
+A weak point of these algorithms is they require knowledge of α before hand. Choices of α may come from domain knowledge, but could also require a separate study.
+In this work we assumed a fully adaptive adversarial
+contamination, constrained only by the total fraction of
+contamination at any time step. By making more assumptions about the adversary, it is likely possible to improve
+uncontaminated regret bounds.
+
+(a) sUCB
+
+(b) tUCB
+
+Figure 4: Regret Sensitivity For σ.
+
+Limitations The adversary used in the simulation is quite
+simple and does not take full advantage of the power we
+allow in our model. We designed it as a first test of our
+algorithms and associated theory. In the future, we would
+like to design simulated adversaries that are modeled on
+real world contamination. It will also be important to deploy contamination robust algorithms in the real world.
+This will require thought on how to select various tuning
+parameters ahead of the deployment.
+There remain many open questions in this area. In
+particular, we think this work could be improved by
+(a) ε = .1
+
+Randomized algorithms UCB-type algorithms are often outperformed in applications by the randomized Thompson sampling algorithm. Creating a randomized algorithm
+that accounts for the contamination model would increase
+the practicality of this line of work.
+
+Figure 5: Front Cluster Attack
+
+the only algorithm we know that accounts for the front
+cluster attack. We chose against this as for our setting of
+T = 1000 the BARBAR algorithm only has one epoch, Contamination correlated with true rewards One posand thus does not make any updates to the estimated gaps, sibility is that the contaminated rewards contain informaresulting in pure exploration.
+tion of the true rewards. For example if contamination can
+9
+
+be missing data, we know dropout can be correlated with Feehan, Lynne M et al. (2018). “Accuracy of Fitbit Dethe treatment condition.
+vices: Systematic Review and Narrative Syntheses of
+Quantitative Data”. In: JMIR mHealth and uHealth
+6.8, e10527.
+Acknowledgements
+Gupta, Anupam, Tomer Koren, and Kunal Talwar (2019).
+L.N. acknowledges the support of NSF via grant DMS“Better Algorithms for Stochastic Bandits with Ad1646108 and thanks Joseph Jay Williams for helpful disversarial Corruptions”. In: Conference on Learning Thecussions and for inspiring this work. A.T. would like to
+ory, pp. 1562–1578.
+acknowledge the support of a Sloan Research Fellowship Huber, Peter (1964). “Robust Estimation of a Location
+and NSF grant CAREER IIS-1452099.
+Parameter”. In: The Annals of Mathematical Statistics
+35.1, pp. 73–101.
+References
+Jun, Kwang-Sung et al. (2018). “Adversarial attacks on
+stochastic bandits”. In: Advances in Neural InformaAhler, Douglas J, Carolyn E Roush, and Gaurav Sood
+tion Processing Systems, pp. 3640–3649.
+(2019). “The micro-task market for lemons: Data qualKapoor, Sayash, Kumar Kshitij Patel, and Purushottam
+ity on Amazon’s Mechanical Turk”. In: Meeting of the
+Kar (2018). “Corruption-Tolerant Bandit Learning”.
+Midwest Political Science Association.
+In: Machine Learning, pp. 1–29.
+Altschuler, Jason, Victor-Emmanuel Brunel, and Alan Malek
+Kothari, Pravesh K, Jacob Steinhardt, and David Steurer
+(2019). “Best Arm Identification for Contaminated Ban(2018). “Robust moment estimation and improved clusdits”. In: Journal of Machine Learning Research 20,
+tering via sum of squares”. In: Proceedings of the 50th
+pp. 1–39.
+Annual ACM SIGACT Symposium on Theory of ComAuer, Peter and Nicolo Cesa-Bianchi (2002). “Finite-Time
+puting, pp. 1035–1046.
+Analysis of the Multiarmed Bandit Problem”. In: MaLai, K. A., A. B. Rao, and S. Vempala (2016). “Agnostic
+chine learning, p. 22.
+Estimation of Mean and Covariance”. In: 2016 IEEE
+Auer, Peter, Nicolò Cesa-Bianchi, et al. (2002). “The Non57th Annual Symposium on Foundations of Computer
+stochastic Multiarmed Bandit Problem”. In: SIAM JourScience (FOCS), pp. 665–674.
+nal on Computing 32.1, pp. 48–77.
+Lattimore, Szepesvari (2018). Bandit Algorithms. CamAuer, Peter and Chao-Kai Chiang (2016). “An Algorithm
+bridge University Poress.
+with Nearly Optimal Pseudo-Regret for Both StochasLiu, Liu, Tianyang Li, and Constantine Caramanis (2019).
+tic and Adversarial Bandits”. In: Conference on Learn“High Dimensional Robust Estimation of Sparse Moding Theory, pp. 116–120.
+els via Trimmed Hard Thresholding”. In: arXiv preprint.
+Bai, Yang et al. (2018). “Comparative Evaluation of Heart
+Liu, Yun-En et al. (2014). “Trading Off Scientific KnowlRate-Based Monitors: Apple Watch vs Fitbit Charge
+edge and User Learning with Multi-Armed Bandits.”
+HR”. In: Journal of Sports Sciences 36.15, pp. 1734–
+In: EDM, pp. 161–168.
+1741.
+Lykouris, Thodoris, Vahab Mirrokni, and Renato Paes Leme
+Bubeck, Sebastien and Aleksandrs Slivkins (2012). “The
+(2018). “Stochastic Bandits Robust to Adversarial CorBest of Both Worlds: Stochastic and Adversarial Banruptions”. In: Proceedings of the 50th Annual ACM
+dits”. In: Conference on Learning Theory.
+SIGACT Symposium on Theory of Computing, STOC,
+Crussell, Jonathan, Ryan Stevens, and Hao Chen (2014).
+pp. 114–122.
+“MAdFraud: Investigating Ad Fraud in Android ApMa, Yuzhe et al. (2019). “Data Poisoning Attacks in Conplications”. In: Proceedings of the 12th Annual Intertextual Bandits”. In: International Conference on Denational Conference on Mobile Systems, Applications,
+cision and Game Theory for Security.
+and Services - MobiSys ’14. Bretton Woods, New HampNecka, Elizabeth A. et al. (2016). “Measuring the Prevashire, USA: ACM Press, pp. 123–134.
+lence of Problematic Respondent Behaviors among MTurk,
+Curran, Paul G. (2016). “Methods for the detection of
+Campus, and Community Participants”. In: PLOS ONE
+carelessly invalid responses in survey data”. In: Jour11.6. Ed. by Jelte M. Wicherts, e0157732.
+nal of Experimental Social Psychology 66, pp. 4–19.
+Pearce, Paul et al. (2014). “Characterizing Large-Scale
+Diakonikolas, Ilias et al. (2019). “Robust Estimators in
+Click Fraud in ZeroAccess”. In: Proceedings of the
+High Dimensions without the Computational Intractabil2014 ACM SIGSAC Conference on Computer and Comity”. In: SIAM Journal on Computing 48.2, pp. 742–
+munications Security - CCS ’14. Scottsdale, Arizona,
+864.
+USA: ACM Press, pp. 141–152.
+
+10
+
+Ryan, Timothy (2018). Data Contamination on MTurk —
+Timothy J. Ryan. en-US.
+Seldin, Yevgeny and Gábor Lugosi (2017). “An Improved
+Parametrization and Analysis of the EXP3++ Algorithm for Stochastic and Adversarial Bandits”. In: pp. 1743–
+1759.
+Seldin, Yevgeny and Aleksandrs Slivkins (2014). “One
+Practical Algorithm for Both Stochastic and Adversarial Bandits.” In: ICML, pp. 1287–1295.
+Williams, Joseph Jay et al. (2016). “AXIS: Generating
+Explanations at Scale with Learnersourcing and Machine Learning”. In: Proceedings of the Third (2016)
+ACM Conference on Learning @ Scale - L@S ’16.
+Edinburgh, Scotland, UK: ACM Press, pp. 379–388.
+Zimmert, Julian and Yevgeny Seldin (2019). “An Optimal Algorithm for Stochastic and Adversarial Bandits”. In: Proceedings of Machine Learning Research.
+Ed. by Kamalika Chaudhuri and Masashi Sugiyama.
+Vol. 89. Proceedings of Machine Learning Research,
+pp. 467–475.
+
+11
+
+A
+
+Proofs
+
+A.1
+
+Theorem 1
+
+Theorem 1 (Trimmed mean concentration). Let G be the set of points x1 , ...xn ∈ R that are drawn from a σ-subGaussian distribution with mean µ. Let Sn be a sample where an ε-fraction of these points are contaminated by an
+adversary. For ε ≤ α < 1/2, t ≥ n we have,
+|trMeanα (Sn ) − µ| ≤
+r
+
+p
+4
+σ
+log(t) + 4α 6 log(t)
+(1 − 2α)
+n
+with probability at least 1 −
+
+4
+t2 .
+
+Proof of theorem 1. Without loss of generality assume µ = 0 for the underlying true distribution. For X ∼ σ-subGaussian, by definition, we have:
+
+
+η2
+P |X| ≥ µ + η ≤ 2 exp(− 2 )
+2σ
+r
+
+
+2
+2
+P |x̄n − µ| ≥ σ
+log
+≤ δ1
+n
+δ1
+and
+
+
+
+t2
+P max |Xi | ≥ t ≤ 2n exp − 2
+2σ
+i∈[n]
+r
+
+
+2n
+P max |Xi | ≥ σ 2 log
+≤ δ2 .
+δ2
+i∈[n]
+
+
+Let G̃ ⊂ Gn represent the points which are not contaminated and C ⊂ Gn represent the contaminated points. Then
+our sample can be represented by the union Sn = G̃ ∪ C. Let R represent the points that remain after trimming α
+fraction of the largest and smallest points, and T be the set of points that were trimmed. Then we have that.
+X
+1
+x
+|trMeanα (Sn )| =
+(1 − 2α)n
+x∈R
+
+1
+=
+(1 − 2α)n
+≤
+
+X
+
+x+
+
+x∈G̃∩R
+
+x
+
+x∈C∩R
+
+X
+X
+X
+1
+x−
+x+
+x
+(1 − 2α)n
+x∈C∩R
+x∈G̃
+x∈G̃∩T
+| {z } | {z } | {z }
+A1
+
+≤
+
+X
+
+1
+(1 − 2α)n
+
+ X
+
+A3
+
+A2
+
+x +
+
+X
+
+x +
+
+
+
+X
+
+x
+
+x∈G̃
+
+x∈G̃∩T
+
+x∈C∩R
+
+| {z }
+
+| {z }
+
+| {z }
+
+A1
+
+A3
+
+A2
+
+with
+A1 =
+
+X
+
+X
+
+x−
+
+x∈Gn
+
+x∈Gn \G̃
+
+x ≤
+
+X
+x∈Gn
+
+x +
+
+X
+
+x ≤ n|x̄Gn | + εn| max xi |
+i∈[n]
+
+w.p. at least 1 − δ1 − δ2 ,
+
+x∈Gn \G̃
+
+A2 ≤ 2αn max |xi |
+
+w.p. at least 1 − δ2 ,
+
+A3 ≤ εn max |xi |
+
+w.p. at least 1 − δ2 .
+
+i∈[n]
+
+i∈[n]
+
+12
+
+Combining we get,
+
+
+1
+|trMeanα (Sn ) − µ| ≤
+|x̄Gn | + max |xi |(2ε + 2α)
+(1 − 2α)
+i∈[n]
+
+
+1
+≤
+|x̄Gn | + max |xi |(4α)
+(1 − 2α)
+i∈[n]
+r
+r
+
+σ
+2t
+2
+2
+≤
+log
++ 4α 2 log
+(1 − 2α)
+n
+δ1
+δ2
+with probability at least 1 − δ1 − δ2 . Letting δ1 =
+|trMeanα (Sn ) − µ| ≤
+with probability at least 1 −
+
+A.2
+
+2
+t2
+
+and δ2 =
+
+σ
+(1 − 2α)
+
+r
+
+2
+t2 ,
+
+and assuming α ≥ ε, we have,
+
+
+p
+4
+log(t) + 4α 6 log(t)
+n
+
+4
+t2 .
+
+Theorem 2
+
+Theorem 2 (α-shorth mean concentration). Let Gn be the set of points x1 , ...xn ∈ R that are drawn from a σ-subGaussian distribution with mean µ. Let Sn be a sample where an ε-fraction of these points are contaminated by an
+adversary. For ε ≤ α < 1/3, t ≥ n, we have,
+|sMeanα (Sn ) − µ| ≤
+r
+σ
+(6α − 8α2 )σ p
+4
+log t +
+6 log t
+1 − 2α n
+(1 − 2α)(1 − α)
+with probability at least 1 −
+
+4
+t2 .
+
+Proof of theorem 2. Without loss of generality assume µ = 0 for the underlying true distribution. Let X ∼ σ-subGaussian.
+We want to bound the impact of the contaminated points in our interval. Once we have this bound, the proof
+follows just as in the trimmed mean.
+Assume α < 1/3 and ε ≤ α. Let J be the interval that contains the shortest 1 − α fraction of Sn , I be the interval
+that contains G̃ (i.e. the remaining good points after contamination), and T be the interval that contains the points of
+Sn after trimming the α largest and smallest fraction of points. Use |I| to denote the length of interval I. It must be
+that I ∩ J 6= ∅ because otherwise the points in I ∪ J would contain 2 − 3α > 1 fraction of Sn . Let c be a point in
+I ∩ J and x be a point in J. Recall that trMeanα (Sn ) is the trimmed mean of the contaminated sample Sn from above.
+Then we have,
+|x| ≤ |x − c| + |c − trMeanα (Sn )| + |trMeanα (Sn )|
+≤ |J| + |I| + |trMeanα (Sn )|
+≤ 2|I| + |trMeanα (Sn )|
+The second step comes from x and c both being in J and because I ⊇ T . The third step comes from |J| ≤ |I|.
+To bound the length of I we have,
+|I| ≤ 2 max |x| w.p. at least 1 − δ2 .
+x∈Gn
+
+Finally, since
+|trMeanα (Sn )| ≤
+
+1
+(|x̄Gn | + 4α max |x|)
+x∈Gn
+(1 − 2α)
+13
+
+with probability at least 1 − δ1 − δ2 , we get that for x ∈ J,
+1
+(|x̄Gn | + 4α max |x|)
+x∈Gn
+(1 − 2α)
+
+
+|x̄Gn |
+4α
+max |x|.
+=
++ 4+
+1 − 2α
+1 − 2α x∈Gn
+
+w.p. at least 1 − δ1 − δ2 ,
+
+|x| ≤ 4 max |xi | +
+i∈[n]
+
+Now that we have a bound on the contaminated points in J, our analysis follows as before,
+|sMeanα (Sn )|
+≤
+
+1
+(1 − α)n
+
+ X
+
+X
+
+x +
+
+x∈G̃
+
+x∈G̃∩¬J
+
+| {z }
+
+|
+
+A1
+
+{z
+
+A2
+
+X
+
+x +
+
+
+x
+
+x∈C∩J
+
+}
+
+| {z }
+A3
+
+where
+A1 ≤ n|x̄Gn | + εn max |x|
+
+w.p. at least 1 − δ1 − δ2 ,
+
+x∈Gn
+
+A2 ≤ αn max |x|
+
+w.p. at least 1 − δ2 ,
+
+x∈Gn
+
+!
+
+A3 ≤ εn
+
+
+|x̄Gn |
+4α 
++ 4+
+max |x|
+1 − 2α
+1 − 2α x∈Gn
+
+w.p. at least 1 − δ1 − δ2 .
+
+Combining we get,
+|sMeanα (Sn ) − µ|
+
+
+4αε 
+ε 
+1
+|x̄Gn | 1 +
++ max |x| 5ε + α +
+≤
+x∈Gn
+(1 − α)
+1 − 2α
+1 − 2α
+
+
+2 
+
+4α
+1
+1−α
+≤
+|x̄Gn |
++ max |x| 6α +
+x∈Gn
+(1 − α)
+1 − 2α
+1 − 2α
+
+
+2
+
+6α − 8α
+1
+1−α
+=
+|x̄Gn |
++ max |x|
+x∈Gn
+1−α
+1 − 2α
+1 − 2α
+r
+r
+2
+σ
+2
+2
+2t
+6α − 8α σ
+≤
+log
+2 log
++
+1 − 2α n
+δ1
+(1 − 2α)(1 − α)
+δ2
+With probability at least 1 − δ1 − δ2 . Letting δ1 =
+
+2
+t2
+
+and δ2 =
+
+2
+t2 ,
+
+and assuming α ≥ ε, we have,
+
+|sMeanα (Sn ) − µ|
+≤
+With probability at least 1 −
+
+A.3
+
+σ
+1 − 2α
+
+r
+
+4
+6α − 8α2 σ p
+log t +
+6 log t
+n
+(1 − 2α)(1 − α)
+
+4
+t2 .
+
+Theorem 3
+
+Theorem 3 (α-trimmed mean crUCB uncontaminated regret). Let K > 1 and T ≥ K − 1. Then with algorithm
+4 with the α-trimmed mean, σ-sub-Gaussian reward distributions with σa ≤ σ0 , and contamination rate ε ≤ α ≤
+∆min√
+, we have the uncontaminated regret bound,
+4(∆
++4σ 6 log T )
+min
+
+0
+
+R̄(U CB) ≤ 8σ0
+
+p
+
+KT log T +
+14
+
+X
+
+15∆a .
+
+Proof of theorem 3. First will show that E[Na (t)] < ∞ for non-optimal actions. Assume Na (t) ≥
+
+s
+
+
+p
+4
+log t + 4α 6 log(t)
+Na (t)
+s
+
+p
+σi + σ0
+4
+≤ µa +
+log t + 4α 6 log(t)
+(1 − 2α)
+Na (t)
+s
+
+p
+2σ0
+4
+∗
+≤ µ − ∆a +
+log t + 4α 6 log(t)
+(1 − 2α)
+Na (t)
+
+σ0
+µ̂a +
+(1 − 2α)
+
+≤ µ∗ − ∆a +
+
+2σ0 4α p
+∆a
++
+6 log t
+2(1 − 2α) (1 − 2α)
+
+≤ µ∗
+
+w.p. at least 1 −
+
+4
+t2
+
+64σ02 log(T )
+∆2a
+∆a
+p
+α≤
+4(∆a + 4σ0 6 log(t))
+
+Na (t) ≥
+
+s
+
+
+p
+4
+6
+log(t)
+log
+t
++
+4α
+N ∗ (t)
+s
+
+
+p
+4
+σ0
+∗
+log t + 4α 6 log(t) .
+≤ µ̂ +
+(1 − 2α)
+N ∗ (t)
+σ i∗
+≤ µ̂ +
+(1 − 2α)
+∗
+
+64σ02 log(T )
+.
+∆2a
+
+w.p. at least 1 −
+
+4
+t2
+
+Now to find E[Na (T )] for non-optimal actions.
+
+ X
+
+T
+E[Na (T )] = 1 + E
+1{At = a}
+t=K+1
+
+ X
+
+
+
+
+T
+64σ02 log(T )
+64σ02 log(T )
+=1+E
+1 At = a, Na (t) ≤
++ 1 At = a, Na (t) >
+∆2a
+∆2a
+t=K+1
+
+
+
+T
+X
+64σ02 log(T )
+64σ02 log(T )
++
+P At = a, Na (t) >
+≤1+
+∆2a
+∆2a
+t=K+1
+
+
+ 
+
+T
+X
+log(T )
+64σ02 log(T )
+64σ02 log(T )
++
+P At = a|Na (t) >
+P Na (t) >
+∆2a
+∆2a
+∆2a
+
+=1+
+
+64σ02
+
+≤1+
+
+64σ02
+
+t=K+1
+
+T
+X
+log(T )
+8
++
+∆2a
+t2
+t=K+1
+
+64σ02 log(T )
+≤
++ 15.
+∆2a
+
+Finally, we can find the regret following the standard analysis,
+15
+
+R̄ =
+
+K
+X
+
+∆a E[Na (T )]
+
+a=2
+
+=
+
+X
+
+∆a E[Na (T )] +
+
+X
+
+
+
+∆a E Na (T )
+
+∆a ≥∆
+
+∆a <∆
+
+X  64σ 2 log(T )
+
+0
+≤ ∆T +
++ 15∆a
+∆a
+
+E[Na (t)] ≤
+
+∆a ≥∆
+
+r
+X
+p
+≤ 8σ0 KT log(T ) +
+15∆a
+
+A.4
+
+∆=
+
+64σ02 log(T )
++ 15
+∆a
+
+64Kσ02 log(T )
+.
+T
+
+Corollary 1
+
+Corollary 1 (α-trimmed mean crUCB uncontaminated regret bounded rewards). If the rewards are bounded by b, and
+min
+have contamination rate ε ≤ α ≤ 4(∆∆min
++4b) , then
+R̄T ≤ 8σ0
+
+p
+
+KT log(T ) +
+
+X
+
+15∆a .
+
+Proof of corollary 1. By replacing the part of the concentration bound for the trimmed mean that is based on the
+maximum value in the sample with b, we get that,
+r
+σ
+4
+4α
+|trMeanα (Sn ) − µ| ≤
+log(t) +
+b
+(1 − 2α) n
+1 − 2α
+with probability at least 1 −
+
+4
+t2 .
+
+First will show that E[Na (t)] < ∞ for non-optimal actions. Assume Na (t) ≥
+σ0
+µ̂a +
+(1 − 2α)
+
+s
+
+4
+4α
+log t +
+b
+Na (t)
+1 − 2α
+s
+σi + σ0
+4
+8α
+≤ µa +
+log t +
+b
+(1 − 2α) Na (t)
+1 − 2α
+s
+4
+8α
+2σ
+0
+≤ µ∗ − ∆a +
+log t +
+b
+(1 − 2α) Na (t)
+1 − 2α
+≤ µ∗ − ∆a +
+
+σ i∗
+≤ µ̂ +
+(1 − 2α)
+
+s
+
+σ0
+≤ µ̂ +
+(1 − 2α)
+
+s
+
+∗
+
+4
+N ∗ (t)
+
+log t +
+
+w.p. at least 1 −
+
+4
+t2
+
+64σ02 log(T )
+∆2a
+∆a
+α≤
+4(∆a + 4b)
+
+∆a
+8α
++
+b
+2(1 − 2α) (1 − 2α)
+
+Na (t) ≥
+
+≤ µ∗
+
+∗
+
+64σ02 log(T )
+.
+∆2a
+
+4α
+b
+1 − 2α
+
+4
+4α
+log t +
+b.
+N ∗ (t)
+1 − 2α
+
+Results follow with a similar analysis as above.
+16
+
+w.p. at least 1 −
+
+4
+t2
+
+A.5
+
+Theorem 4
+
+Theorem 4 (α-shorth mean crUCB uncontaminated regret). Let K > 1 and T ≥ K − 1. Then with algorithm
+4 with the α-shorth mean, sub-Gaussian reward distributions with σa ≤ σ0 , and contamination rate ε ≤ α ≤
+∆min√
+, we have the uncontaminated regret bound,
+4(∆min +9σ0 6 log T )
+X
+p
+R̄(U CB) ≤ 8σ0 KT log T +
+15∆a .
+Proof of theorem 4. The proof for the contamination robust UCB using the α-shorth mean is similar to that of the
+trimmed mean.
+s
+
+4
+(6α − 8α2 )σ p
+6 log t
+log t +
+Na (t)
+(1 − 2α)(1 − α)
+s
+2σ0
+4
+(6α − 8α2 )σ0 p
+∗
+≤ µ − ∆a +
+log t
+log t + 2
+1 − 2α Na (t)
+(1 − 2α)(1 − α)
+
+σ0
+µ̂a +
+1 − 2α
+
+≤ µ∗ − ∆a +
+
+Na (t) ≥
+
+≤ µ∗
+s
+
+4
+t2
+
+64σ02 log(t)
+, α < 1/3
+∆2a
+∆a
+√
+α≤
+4(∆a + 9σ0 6 log t)
+
+18ασ0 p
+∆a
++
+6 log t
+2(1 − 2α) (1 − 2α)
+
+σ0
+≤ µ̂∗ +
+1 − 2α
+
+w.p.a.l 1 −
+
+4
+6α − 8α2 σ p
+log
+t
++
+6 log t
+N ∗ (t)
+(1 − 2α)(1 − α)
+
+Using the analysis from the trimmed mean regret, we again get,
+E[Na (t)] ≤
+
+64σ02 log T X
++
+15∆a
+∆a
+
+Using this value and standard regret analysis yields
+X
+p
+15∆a .
+R̄T ≤ 8σ0 KT log(T ) +
+
+A.6
+
+Corollary 2
+
+Corollary 2 (α-shorth mean crUCB uncontaminated regret bounded rewards). If the rewards are bounded by b, and
+min
+have contamination rate ε ≤ α ≤ 4(∆∆min
++9b) , then
+X
+p
+R̄T ≤ 8σ0 KT log(T ) +
+15∆a .
+Proof of corollary 2. By replacing the part of the concentration bound for the trimmed mean that is based on the
+maximum value in the sample with b, we get that,
+σ
+|sMeanα (Sn ) − µ| ≤
+1 − 2α
+
+r
+
+6α − 8α2
+4
+log t +
+b
+n
+(1 − 2α)(1 − α)
+
+With probability at least 1 − t42 .
+Follow similar analysis as in appendix A.4 but setting constraint to be,
+ε≤α≤
+
+∆min
+4(∆min + 9b)
+
+17
+
+B
+
+Relationship of ε and ∆min
+
+One quick example showing that ε > ∆min can prohibit sublinear regret is to consider the CSB game with two actions
+and Bernoulli rewards. If a1 ∼ B(p) and a2 ∼ B(p − ε) then an adversary can choose all the contaminated rewards
+for a2 to be 1 making it appear that a2 ∼ B(p). Thus the actions are indistinguishable to the learner.
+However, we can still provide a bound for larger values of ε provided one is willing to tolerate a linear term in
+the regret. We outline the argument only for the trimmed mean case since the argument for the shorth mean is very
+similar. Note that argument for bounding E[Na (T )] in Theorem 3 works under the condition
+α≤
+
+∆a
+p
+
+4(∆a + 4σ0
+
+6 log(T ))
+
+.
+
+Let S be the set of actions satisfying this condition. The arguments in the proof of Theorem 3 show that
+X
+X
+p
+∆a E[Na (T )] ≤ 8σ0 KT log(T ) +
+15∆a .
+a>1,a∈S
+
+a>1,a∈S
+
+√
+Therefore the bound of Õ(σ0 KT ) holds only for the regret due to actions a ∈ S. For any action a ∈
+/ S, we have
+p
+16ασ0 6 log(T )
+∆a <
+1 − 4α
+assuming α < 0.25. The total regret contribution for a ∈
+/ S is therefore
+p
+X
+16ασ0 6 log(T ) X
+E[Na (T )]
+∆a E[Na (T )] ≤
+1 − 4α
+a>1,a∈S
+/
+a>1,a∈S
+/
+p
+16ασ0 6 log(T )
+T
+≤
+1 − 4α
+√
+So the total regret is Õ( KT +
+
+α
+1−4α T ).
+
+18
+
+

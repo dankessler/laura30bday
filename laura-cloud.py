@@ -23,9 +23,8 @@ text3 = open(path.join(d, '1910.05625.txt')).read()
 text = text1 + text2 + text3
 
 # read the mask image
-# taken from
-# http://www.stencilry.org/stencils/movies/alice%20in%20wonderland/255fk.jpg
-alice_mask = np.array(Image.open(path.join(d, "alice_mask.png")))
+# hand-lettered by Sara :)
+mask = np.array(Image.open(path.join(d, "mask.png")))
 
 stopwords = set(STOPWORDS)
 stopwords.add("said")

@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 """
-Masked wordcloud
-================
-Using a mask you can generate wordclouds in arbitrary shapes.
+This file adapted from the Alice example at
+https://github.com/amueller/word_cloud/blob/d1ec087a7f86e6dc14ed3771a9f8e84a5d384e0a/examples/masked.py
 """
 
 from os import path

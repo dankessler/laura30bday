@@ -15,8 +15,12 @@ from wordcloud import WordCloud, STOPWORDS
 # get data directory (using getcwd() is needed to support running example in generated IPython notebook)
 d = path.dirname(__file__) if "__file__" in locals() else os.getcwd()
 
-# Read the whole text.
-text = open(path.join(d, 'alice.txt')).read()
+# Read several arxiv preprints.
+text1 = open(path.join(d, '1707.00391.txt')).read()
+text2 = open(path.join(d, '1807.00461.txt')).read()
+text3 = open(path.join(d, '1910.05625.txt')).read()
+
+text = text1 + text2 + text3
 
 # read the mask image
 # taken from
